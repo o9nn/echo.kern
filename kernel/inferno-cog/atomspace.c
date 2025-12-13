@@ -39,9 +39,22 @@ MODULE_VERSION("1.0.0");
 /* Global kernel atomspace instance */
 static struct kern_atomspace global_atomspace;
 
-/* OEIS A000081 sequence for validation */
+/* OEIS A000081 sequence for validation (indexed from 0, sequence starts at n=1) */
 static const uint32_t oeis_a000081[] = {
-    0, 1, 1, 2, 4, 9, 20, 48, 115, 286, 719, 1842, 4766, 12486
+    1,      /* A000081(0) = 1 by convention */
+    1,      /* A000081(1) = 1 */
+    1,      /* A000081(2) = 1 */
+    2,      /* A000081(3) = 2 */
+    4,      /* A000081(4) = 4 */
+    9,      /* A000081(5) = 9 */
+    20,     /* A000081(6) = 20 */
+    48,     /* A000081(7) = 48 */
+    115,    /* A000081(8) = 115 */
+    286,    /* A000081(9) = 286 */
+    719,    /* A000081(10) = 719 */
+    1842,   /* A000081(11) = 1842 */
+    4766,   /* A000081(12) = 4766 */
+    12486   /* A000081(13) = 12486 */
 };
 #define OEIS_A000081_LEN (sizeof(oeis_a000081) / sizeof(oeis_a000081[0]))
 
@@ -212,8 +225,16 @@ atom_id_t atom_create(atom_type_t type, const char *name, truth_value_t tv)
     struct rb_node **new, *parent = NULL;
     
     /* Validate inputs */
-    if (!name || strlen(name) >= ATOMSPACE_MAX_NAME_LEN) {
-        pr_err("inferno_cog: Invalid atom name\n");
+    if (!name) {
+        pr_err("inferno_cog: NULL atom name\n");
+        return ATOM_ID_INVALID;
+    }
+    
+    /* Use strnlen for safety - kernel-safe string length check */
+    size_t name_len = strnlen(name, ATOMSPACE_MAX_NAME_LEN);
+    if (name_len >= ATOMSPACE_MAX_NAME_LEN) {
+        pr_err("inferno_cog: Atom name too long (%zu >= %d)\n", 
+               name_len, ATOMSPACE_MAX_NAME_LEN);
         return ATOM_ID_INVALID;
     }
     

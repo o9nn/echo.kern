@@ -123,11 +123,10 @@ int pln_infer(struct pln_engine *pln, atom_id_t *premises, uint32_t n,
              atom_id_t *conclusion)
 {
     /* Stub implementation - will be expanded */
-    atomic64_inc(&pln->total_inferences);
-    
-    pr_debug("inferno_cog: PLN inference with %u premises\n", n);
+    pr_debug("inferno_cog: PLN inference with %u premises (stub)\n", n);
     
     /* TODO: Implement actual inference logic */
+    /* Only increment counter when actual implementation exists */
     return -ENOSYS;  /* Not yet implemented */
 }
 
@@ -144,11 +143,10 @@ int pln_forward_chain(struct pln_engine *pln, atom_id_t seed,
                      atom_id_t **results, uint32_t *n)
 {
     /* Stub implementation */
-    atomic64_inc(&pln->fc.total_inferences);
-    
-    pr_debug("inferno_cog: PLN forward chaining from atom %llu\n", seed);
+    pr_debug("inferno_cog: PLN forward chaining from atom %llu (stub)\n", seed);
     
     /* TODO: Implement forward chaining */
+    /* Only increment counter when actual implementation exists */
     return -ENOSYS;
 }
 

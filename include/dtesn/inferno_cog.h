@@ -201,8 +201,8 @@ struct inference_rule {
     
     atom_id_t conclusion_pattern;    /* Conclusion pattern */
     
-    /* Rule application */
-    truth_value_t (*apply)(truth_value_t *premise_tvs, uint32_t count);
+    /* Rule application - returns 0 on success, negative on error */
+    int (*apply)(truth_value_t *premise_tvs, uint32_t count, truth_value_t *result);
     
     /* Metadata */
     float weight;                    /* Rule weight/priority */

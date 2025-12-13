@@ -316,10 +316,13 @@ int ecan_stimulate(struct attention_bank *ecan, atom_id_t id, int16_t delta)
     
     spin_unlock(&ecan->lock);
     
+    /* Release atom reference */
+    atom_put_ref(atom);
+    
     atomic64_inc(&ecan->stimulations);
     
     pr_debug("inferno_cog: Stimulated atom %llu: STI %d -> %d (delta %d)\n",
-             id, atom->av.sti - delta, atom->av.sti, delta);
+             id, new_sti - delta, new_sti, delta);
     
     return 0;
 }
@@ -346,6 +349,9 @@ int ecan_spread_importance(struct attention_bank *ecan, atom_id_t source)
     
     /* Calculate spread amount (e.g., 10% of STI) */
     spread_amount = atom->av.sti / 10;
+    
+    /* Release atom reference */
+    atom_put_ref(atom);
     
     if (spread_amount == 0) {
         return 0;  /* Nothing to spread */
@@ -419,8 +425,11 @@ int ecan_forget(struct attention_bank *ecan)
     /* Check atoms in STI heap */
     while (heap_pop(ecan->sti_heap, &atom_id, &sti) == 0) {
         if (sti < ecan->forget_threshold) {
-            /* Forget this atom */
+            /* Remove from heap first (already done by pop) */
+            /* Now safe to delete - no other threads should reference it */
+            spin_unlock(&ecan->lock);
             atom_delete(atom_id);
+            spin_lock(&ecan->lock);
             forgotten++;
             atomic64_inc(&ecan->forgetting_events);
         } else {

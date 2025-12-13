@@ -137,11 +137,7 @@ static float moses_evaluate_fitness(struct moses_optimizer *moses,
 static int moses_mutate(struct moses_optimizer *moses, struct program *program)
 {
     /* Stub implementation - will be expanded */
-    uint32_t rand;
-    
-    get_random_bytes(&rand, sizeof(rand));
-    
-    /* TODO: Implement actual mutation operators */
+    /* TODO: Implement actual mutation operators using random selection */
     pr_debug("inferno_cog: Mutating program (stub)\n");
     
     return 0;
@@ -223,6 +219,12 @@ int moses_evolve(struct moses_optimizer *moses, struct program *seed,
     
     if (!seed || !result)
         return -EINVAL;
+    
+    /* Validate population size */
+    if (moses->pop.max_size == 0) {
+        pr_err("inferno_cog: MOSES population not initialized\n");
+        return -EINVAL;
+    }
     
     pr_info("inferno_cog: Starting MOSES evolution: %u generations\n",
             generations);
