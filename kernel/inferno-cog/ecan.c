@@ -317,7 +317,7 @@ int ecan_stimulate(struct attention_bank *ecan, atom_id_t id, int16_t delta)
     spin_unlock(&ecan->lock);
     
     /* Release atom reference */
-    atom_put_ref(atom);
+    atom_put(atom);
     
     atomic64_inc(&ecan->stimulations);
     
@@ -351,7 +351,7 @@ int ecan_spread_importance(struct attention_bank *ecan, atom_id_t source)
     spread_amount = atom->av.sti / 10;
     
     /* Release atom reference */
-    atom_put_ref(atom);
+    atom_put(atom);
     
     if (spread_amount == 0) {
         return 0;  /* Nothing to spread */
@@ -415,26 +415,32 @@ int ecan_update_af(struct attention_bank *ecan)
  */
 int ecan_forget(struct attention_bank *ecan)
 {
-    atom_id_t atom_id;
+    atom_id_t *atoms_to_forget;
     int16_t sti;
     int forgotten = 0;
+    int to_forget_count = 0;
+    int to_forget_capacity = 100;
+    int i;
     uint64_t now = get_timestamp_ns();
+    
+    /* Allocate temporary array for atoms to forget */
+    atoms_to_forget = kzalloc(to_forget_capacity * sizeof(atom_id_t), GFP_KERNEL);
+    if (!atoms_to_forget) {
+        pr_warn("inferno_cog: Failed to allocate forgetting buffer\n");
+        return 0;
+    }
     
     spin_lock(&ecan->lock);
     
-    /* Check atoms in STI heap */
-    while (heap_pop(ecan->sti_heap, &atom_id, &sti) == 0) {
+    /* Collect atoms below threshold without modifying heap during iteration */
+    while (to_forget_count < to_forget_capacity && 
+           heap_pop(ecan->sti_heap, &atoms_to_forget[to_forget_count], &sti) == 0) {
         if (sti < ecan->forget_threshold) {
-            /* Remove from heap first (already done by pop) */
-            /* Now safe to delete - no other threads should reference it */
-            spin_unlock(&ecan->lock);
-            atom_delete(atom_id);
-            spin_lock(&ecan->lock);
-            forgotten++;
-            atomic64_inc(&ecan->forgetting_events);
+            /* Mark for deletion */
+            to_forget_count++;
         } else {
             /* Re-insert - above threshold */
-            heap_insert(ecan->sti_heap, atom_id, sti);
+            heap_insert(ecan->sti_heap, atoms_to_forget[to_forget_count], sti);
             break;
         }
     }
@@ -442,6 +448,15 @@ int ecan_forget(struct attention_bank *ecan)
     ecan->last_forget_time_ns = now;
     
     spin_unlock(&ecan->lock);
+    
+    /* Now delete atoms outside of spinlock to avoid race conditions */
+    for (i = 0; i < to_forget_count; i++) {
+        atom_delete(atoms_to_forget[i]);
+        forgotten++;
+        atomic64_inc(&ecan->forgetting_events);
+    }
+    
+    kfree(atoms_to_forget);
     
     if (forgotten > 0) {
         pr_info("inferno_cog: Forgetting: removed %d atoms below threshold %d\n",

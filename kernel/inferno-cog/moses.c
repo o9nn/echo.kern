@@ -229,9 +229,14 @@ int moses_evolve(struct moses_optimizer *moses, struct program *seed,
     pr_info("inferno_cog: Starting MOSES evolution: %u generations\n",
             generations);
     
-    /* Initialize population with seed */
+    /* Initialize population with seed (deep copy for safety) */
     spin_lock(&moses->lock);
-    moses->pop.programs[0] = *seed;
+    moses->pop.programs[0].root = seed->root;
+    moses->pop.programs[0].as = seed->as;
+    moses->pop.programs[0].fitness = seed->fitness;
+    moses->pop.programs[0].complexity = seed->complexity;
+    /* Note: For deep copy of atom structures, would need additional allocation */
+    /* TODO: Implement proper deep copy when atom pointers are involved */
     moses->pop.size = 1;
     moses->pop.best_fitness = 0.0;
     spin_unlock(&moses->lock);

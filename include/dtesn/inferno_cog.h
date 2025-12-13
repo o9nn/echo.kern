@@ -368,6 +368,7 @@ void atomspace_exit(void);
 atom_id_t atom_create(atom_type_t type, const char *name, truth_value_t tv);
 int atom_delete(atom_id_t id);
 int atom_get(atom_id_t id, struct kern_atom **out);
+void atom_put(struct kern_atom *atom);  /* Release reference from atom_get */
 int atom_set_tv(atom_id_t id, truth_value_t tv);
 int atom_get_tv(atom_id_t id, truth_value_t *out);
 

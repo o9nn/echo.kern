@@ -91,19 +91,22 @@ static int validate_oeis_depth(uint32_t depth)
 
 /*
  * =============================================================================
- * Atom Reference Counting
+ * Atom Reference Counting (Public Interface)
  * =============================================================================
  */
 
-/* Increment atom reference count */
-static inline void atom_get_ref(struct kern_atom *atom)
+/**
+ * atom_put - Decrement atom reference count and free if zero
+ * @atom: Atom to release reference
+ * 
+ * This function must be called after atom_get() to release the reference.
+ * When reference count reaches zero, the atom is freed.
+ */
+void atom_put(struct kern_atom *atom)
 {
-    atomic_inc(&atom->refcount);
-}
-
-/* Decrement atom reference count and free if zero */
-static void atom_put_ref(struct kern_atom *atom)
-{
+    if (!atom)
+        return;
+        
     if (atomic_dec_and_test(&atom->refcount)) {
         /* Free outgoing set for links */
         if (atom->outgoing) {
@@ -195,7 +198,7 @@ void atomspace_exit(void)
         hash_del(&atom->hash_node);
         
         /* Release atom */
-        atom_put_ref(atom);
+        atom_put(atom);
         freed_count++;
     }
     
@@ -360,7 +363,7 @@ int atom_delete(atom_id_t id)
             spin_unlock(&global_atomspace.lock);
             
             /* Release atom */
-            atom_put_ref(atom);
+            atom_put(atom);
             
             pr_debug("inferno_cog: Deleted atom %llu\n", id);
             return 0;
@@ -379,7 +382,7 @@ int atom_delete(atom_id_t id)
  * @out: Pointer to store atom pointer
  * 
  * Looks up atom by ID and returns pointer with incremented reference count.
- * Caller must call atom_put_ref() when done.
+ * Caller must call atom_put() when done.
  * 
  * Return: 0 on success, negative error code on failure
  */
@@ -405,7 +408,7 @@ int atom_get(atom_id_t id, struct kern_atom **out)
             node = node->rb_right;
         } else {
             /* Found atom - increment reference count */
-            atom_get_ref(atom);
+            atomic_inc(&atom->refcount);
             *out = atom;
             spin_unlock(&global_atomspace.lock);
             return 0;
@@ -433,7 +436,7 @@ int atom_set_tv(atom_id_t id, truth_value_t tv)
         return ret;
     
     atom->tv = tv;
-    atom_put_ref(atom);
+    atom_put(atom);
     
     pr_debug("inferno_cog: Set TV for atom %llu: (%.3f,%.3f)\n",
              id, tv.strength, tv.confidence);
@@ -461,7 +464,7 @@ int atom_get_tv(atom_id_t id, truth_value_t *out)
         return ret;
     
     *out = atom->tv;
-    atom_put_ref(atom);
+    atom_put(atom);
     
     return 0;
 }
@@ -598,6 +601,7 @@ EXPORT_SYMBOL(atomspace_exit);
 EXPORT_SYMBOL(atom_create);
 EXPORT_SYMBOL(atom_delete);
 EXPORT_SYMBOL(atom_get);
+EXPORT_SYMBOL(atom_put);
 EXPORT_SYMBOL(atom_set_tv);
 EXPORT_SYMBOL(atom_get_tv);
 EXPORT_SYMBOL(atomspace_set_oeis_depth);

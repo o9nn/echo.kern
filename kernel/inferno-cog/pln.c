@@ -163,11 +163,10 @@ int pln_backward_chain(struct pln_engine *pln, atom_id_t goal,
                       atom_id_t **results, uint32_t *n)
 {
     /* Stub implementation */
-    atomic64_inc(&pln->bc.total_queries);
-    
-    pr_debug("inferno_cog: PLN backward chaining for goal %llu\n", goal);
+    pr_debug("inferno_cog: PLN backward chaining for goal %llu (stub)\n", goal);
     
     /* TODO: Implement backward chaining */
+    /* Only increment counter when actual implementation exists */
     return -ENOSYS;
 }
 
